@@ -2,7 +2,8 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>Nuo AR Face Mask</title>
+  <title>Nuo AR Face Mask (iOS Fix)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <script src="https://cdn.jsdelivr.net/npm/three@0.136.0/build/three.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.1.4/dist/mindar-face-three.prod.js"></script>
   <style>
@@ -10,7 +11,7 @@
       margin: 0;
       padding: 0;
       overflow: hidden;
-      background: black;
+      background-color: black;
       display: flex;
       flex-direction: row;
       height: 100vh;
@@ -19,6 +20,7 @@
     #ar-container {
       flex: 1;
       position: relative;
+      background: #000;
     }
     #controls {
       width: 160px;
@@ -45,19 +47,20 @@
   </div>
 
   <script>
-    const eyeTextures = [];
-    const noseTextures = [];
-    const mouthTextures = [];
+    const eyeTextures = [], noseTextures = [], mouthTextures = [];
     let currentIndex = { eye: 0, nose: 0, mouth: 0 };
 
     const loadTexture = (path) => {
-      return new THREE.TextureLoader().load(path);
+      const loader = new THREE.TextureLoader();
+      const texture = loader.load(path);
+      texture.encoding = THREE.sRGBEncoding;
+      return texture;
     };
 
     for (let i = 1; i <= 25; i++) {
-      eyeTextures.push(loadTexture('assets/eyes/eye' + i + '.png'));
-      noseTextures.push(loadTexture('assets/noses/nose' + i + '.png'));
-      mouthTextures.push(loadTexture('assets/mouths/mouth' + i + '.png'));
+      eyeTextures.push(loadTexture('./assets/eyes/eye' + i + '.png'));
+      noseTextures.push(loadTexture('./assets/noses/nose' + i + '.png'));
+      mouthTextures.push(loadTexture('./assets/mouths/mouth' + i + '.png'));
     }
 
     let eyeObj, noseObj, mouthObj;
@@ -70,34 +73,39 @@
     };
 
     const start = async () => {
-      const mindarThree = new window.MINDAR.FACE.MindARThree({
-        container: document.querySelector("#ar-container"),
-      });
-      const { renderer, scene, camera } = mindarThree;
+      try {
+        const mindarThree = new window.MINDAR.FACE.MindARThree({
+          container: document.querySelector("#ar-container"),
+        });
+        const { renderer, scene, camera } = mindarThree;
 
-      await mindarThree.start();
+        await mindarThree.start();
 
-      const anchor = mindarThree.addAnchor(168); // nose base
+        const anchor = mindarThree.addAnchor(168); // nose base
 
-      const createPart = (texture, position) => {
-        const material = new THREE.MeshBasicMaterial({ map: texture, transparent: true });
-        const geometry = new THREE.PlaneGeometry(0.7, 0.7);
-        const mesh = new THREE.Mesh(geometry, material);
-        mesh.position.set(...position);
-        return mesh;
-      };
+        const createPart = (texture, position) => {
+          const material = new THREE.MeshBasicMaterial({ map: texture, transparent: true });
+          const geometry = new THREE.PlaneGeometry(0.7, 0.7);
+          const mesh = new THREE.Mesh(geometry, material);
+          mesh.position.set(...position);
+          return mesh;
+        };
 
-      eyeObj = createPart(eyeTextures[0], [-0.4, 0.4, 0]);
-      noseObj = createPart(noseTextures[0], [0, 0, 0]);
-      mouthObj = createPart(mouthTextures[0], [0, -0.6, 0]);
+        eyeObj = createPart(eyeTextures[0], [-0.4, 0.4, 0]);
+        noseObj = createPart(noseTextures[0], [0, 0, 0]);
+        mouthObj = createPart(mouthTextures[0], [0, -0.6, 0]);
 
-      anchor.group.add(eyeObj);
-      anchor.group.add(noseObj);
-      anchor.group.add(mouthObj);
+        anchor.group.add(eyeObj);
+        anchor.group.add(noseObj);
+        anchor.group.add(mouthObj);
 
-      renderer.setAnimationLoop(() => {
-        renderer.render(scene, camera);
-      });
+        renderer.setAnimationLoop(() => {
+          renderer.render(scene, camera);
+        });
+      } catch (e) {
+        alert("无法启动摄像头，请检查浏览器权限设置。\n\n错误信息：" + e.message);
+        console.error("MindAR start error", e);
+      }
     };
 
     start();
